@@ -46,10 +46,20 @@
             -webkit-appearance: none;
             margin: 0;
         }
+        /* Hide scrollbar for the favorites container */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none; /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
     </style>
 </head>
 <body class="min-h-screen text-white">
 
+    <!-- Note: Firebase imports have been removed. Data persistence is now handled by browser Local Storage. -->
+    
     <!-- Header & Navigation -->
     <header class="sticky top-0 z-50 bg-gray-900 shadow-lg border-b border-gray-800">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center">
@@ -72,6 +82,18 @@
 
     <!-- Main Content Area -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Favorites Section -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold text-white mb-4">Your Favorites</h2>
+            <div id="favoritesContainer" class="flex overflow-x-scroll space-x-4 no-scrollbar pb-4">
+                <p id="favoritesStatus" class="text-gray-400">Loading favorites...</p>
+                <!-- Favorite cards will be rendered here -->
+            </div>
+        </section>
+        
+        <h2 class="text-2xl font-bold text-white mb-4">Search Results</h2>
+        
         <!-- Status/Error Message Area -->
         <div id="statusMessage" class="text-center p-4 text-lg font-semibold text-gray-400">
             Start searching for your favorite titles!
@@ -84,7 +106,7 @@
     </main>
 
     <!-- Episode Selection Modal (Hidden by default) -->
-    <div id="episodeModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+    <div id="episodeModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-[70] flex items-center justify-center p-4">
         <div class="bg-gray-800 p-8 rounded-xl shadow-2xl w-full max-w-sm border-t-4 border-red-gemini">
             <h3 class="text-2xl font-bold mb-4 text-white" id="modalTitle">Select Episode</h3>
             <p class="text-gray-300 mb-6">Enter the season and episode number to start watching this series.</p>
@@ -113,8 +135,8 @@
         </div>
     </div>
 
-    <!-- PLAYER MODAL (NEW) -->
-    <div id="playerModal" class="hidden fixed inset-0 bg-black bg-opacity-90 z-[60] flex flex-col items-center justify-center p-4">
+    <!-- PLAYER MODAL -->
+    <div id="playerModal" class="hidden fixed inset-0 bg-black bg-opacity-90 z-[80] flex flex-col items-center justify-center p-4">
         <div class="w-full h-full max-w-5xl max-h-[80vh] relative">
             <!-- Control Buttons (Fullscreen and Close) -->
             <div class="absolute -top-10 right-0 md:-top-12 md:right-0 z-50 flex space-x-2">
@@ -151,6 +173,7 @@
         // --- API Configuration ---
         const API_KEY = "89183001";
         const OMDB_BASE_URL = "https://www.omdbapi.com/?apikey=" + API_KEY + "&s=";
+        const LOCAL_STORAGE_KEY = "streamFinderFavorites";
 
         // --- DOM Elements ---
         const searchInput = document.getElementById('searchInput');
@@ -161,121 +184,178 @@
         const messageContent = document.getElementById('messageContent');
         const episodeModal = document.getElementById('episodeModal');
         const watchEpisodeButton = document.getElementById('watchEpisodeButton');
+        const favoritesContainer = document.getElementById('favoritesContainer');
+        const favoritesStatus = document.getElementById('favoritesStatus');
         
-        // NEW PLAYER ELEMENTS
         const playerModal = document.getElementById('playerModal');
         const playerIframe = document.getElementById('playerIframe');
         const playerTitle = document.getElementById('playerTitle');
-        const fullscreenButton = document.getElementById('fullscreenButton'); // New
 
-        let currentSeriesImdbId = null; // Store the ID for the modal watch button
-
-        // --- Utility Functions ---
-
-        /**
-         * Displays a temporary notification message instead of using alert().
-         * @param {string} message - The message to display.
-         * @param {string} [type='info'] - The type ('error', 'info').
-         */
-        function showMessage(message, type = 'info') {
-            const color = type === 'error' ? 'border-red-500' : 'border-blue-500';
-            messageContent.textContent = message;
-            messageBox.className = `fixed bottom-5 right-5 z-50 bg-gray-800 text-white p-4 rounded-lg shadow-xl border-l-4 ${color} transition-opacity duration-300`;
-            messageBox.classList.remove('hidden');
-            
-            setTimeout(() => {
-                messageBox.classList.add('hidden');
-            }, 3000);
-        }
-
-        /**
-         * Clears results and sets a status message.
-         * @param {string} message - The message to display.
-         * @param {boolean} isLoading - Whether to show a loading indicator.
-         */
-        function setStatus(message, isLoading = false) {
-            resultsContainer.innerHTML = '';
-            statusMessage.textContent = message;
-            statusMessage.style.display = 'block';
-            if (isLoading) {
-                // Simple loading spinner
-                statusMessage.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-red-gemini inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Searching...`;
-            }
-        }
-
-        // --- Modal Control (Episode Selection) ---
-
-        /** Shows the episode selection modal for a series. */
-        function showModal(title, imdbID) {
-            currentSeriesImdbId = imdbID;
-            document.getElementById('modalTitle').textContent = `Watch ${title}`;
-            // Reset to default S1 E1
-            document.getElementById('seasonInput').value = 1;
-            document.getElementById('episodeInput').value = 1;
-            episodeModal.classList.remove('hidden');
-        }
-
-        /** Hides the episode selection modal. */
-        function closeModal() {
-            episodeModal.classList.add('hidden');
-            currentSeriesImdbId = null;
-        }
-
-        // --- Modal Control (Player Embed) ---
-
-        /**
-         * Opens the constructed player URL in the embedded modal.
-         * @param {string} url - The final embed URL.
-         * @param {string} title - The title of the media.
-         */
-        function openPlayer(url, title) {
-            playerTitle.textContent = title;
-            playerIframe.src = url;
-            playerModal.classList.remove('hidden');
-            showMessage(`Starting playback for: ${title}`, 'info');
-        }
-
-        /** Closes the embedded player modal and stops playback. */
-        function closePlayerModal() {
-            // Clear iframe source to stop playback and release resources
-            playerIframe.src = "";
-            playerModal.classList.add('hidden');
-        }
+        let currentSeriesImdbId = null; 
         
-        /**
-         * Toggles fullscreen mode for the player iframe.
-         * Requests fullscreen on the iframe element to allow native video player control.
-         */
-        function toggleFullScreen() {
-            // We request fullscreen on the iframe element itself
-            const element = playerIframe;
+        // Global state for fast lookup of favorited items (IMDb ID)
+        const userFavorites = new Set();
 
-            if (!document.fullscreenElement) {
-                // Enter fullscreen
-                if (element.requestFullscreen) {
-                    element.requestFullscreen();
-                } else if (element.webkitRequestFullscreen) { /* Safari */
-                    element.webkitRequestFullscreen();
-                } else if (element.msRequestFullscreen) { /* IE11 */
-                    element.msRequestFullscreen();
-                }
-            } else {
-                // Exit fullscreen
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.webkitExitFullscreen) { /* Safari */
-                    document.webkitExitFullscreen();
-                } else if (document.msExitFullscreen) { /* IE11 */
-                    document.msExitFullscreen();
-                }
+
+        // --- Local Storage Initialization ---
+        window.onload = function() {
+            loadFavoritesFromLocalStorage();
+        };
+
+        /**
+         * Loads the favorites array from Local Storage, populates the set, and renders the UI.
+         */
+        function loadFavoritesFromLocalStorage() {
+            userFavorites.clear();
+            favoritesStatus.textContent = "Loading favorites...";
+
+            try {
+                const storedJson = localStorage.getItem(LOCAL_STORAGE_KEY);
+                const storedFavorites = storedJson ? JSON.parse(storedJson) : [];
+                
+                // Populate the Set for quick lookups
+                storedFavorites.forEach(item => {
+                    userFavorites.add(item.imdbID);
+                });
+                
+                // Render the list
+                renderFavorites(storedFavorites);
+            } catch (error) {
+                console.error("Error loading favorites from local storage:", error);
+                favoritesStatus.textContent = "Error loading local favorites data. Clear browser cache if issue persists.";
+                renderFavorites([]);
             }
         }
 
-        // --- Core Search Functionality ---
+        // --- Favorites Rendering & Logic ---
+
+        /**
+         * Renders the favorite items in the dedicated section.
+         * @param {Array<Object>} favorites - Array of favorite media objects.
+         */
+        function renderFavorites(favorites) {
+            favoritesContainer.innerHTML = '';
+            
+            if (favorites.length === 0) {
+                favoritesStatus.textContent = "No favorites added yet. Search and click the heart icon to save titles!";
+                favoritesContainer.appendChild(favoritesStatus);
+                return;
+            }
+            
+            // Remove the status message if there are favorites
+            favoritesStatus.remove();
+
+            // Create cards for each favorite item
+            favorites.forEach(item => {
+                const card = createMediaCard(item, true); // true for isFavoriteCard
+                favoritesContainer.appendChild(card);
+            });
+        }
+
+        /**
+         * Toggles the favorite status of a media item in Local Storage.
+         * @param {Object} item - The media item object ({Title, Year, Type, Poster, imdbID}).
+         */
+        function handleFavoriteToggle(item) {
+            const { imdbID, Title } = item;
+
+            try {
+                const storedJson = localStorage.getItem(LOCAL_STORAGE_KEY);
+                let favoritesArray = storedJson ? JSON.parse(storedJson) : [];
+
+                if (userFavorites.has(imdbID)) {
+                    // REMOVE from favorites
+                    favoritesArray = favoritesArray.filter(fav => fav.imdbID !== imdbID);
+                    showMessage(`Removed "${Title}" from favorites!`, 'info');
+                } else {
+                    // ADD to favorites
+                    favoritesArray.push({
+                        Title: item.Title,
+                        Year: item.Year,
+                        Type: item.Type,
+                        Poster: item.Poster,
+                        imdbID: item.imdbID,
+                        addedAt: new Date().toISOString()
+                    });
+                    showMessage(`Added "${Title}" to favorites!`, 'info');
+                }
+
+                // Save the updated array back to local storage
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(favoritesArray));
+                
+                // Manually trigger UI update to reflect the change
+                loadFavoritesFromLocalStorage();
+
+            } catch (error) {
+                console.error("Error toggling favorite status in local storage:", error);
+                showMessage(`Failed to update favorites for "${Title}".`, 'error');
+            }
+        }
+
+
+        // --- UI Component Creation ---
+
+        /**
+         * Creates a single media card element.
+         * @param {Object} item - The media item data.
+         * @param {boolean} [isFavoriteCard=false] - Whether this card is being rendered in the Favorites section.
+         * @returns {HTMLElement} The card element.
+         */
+        function createMediaCard(item, isFavoriteCard = false) {
+            const isFavorite = userFavorites.has(item.imdbID);
+            const card = document.createElement('div');
+            
+            // Use different styling if it's a favorite card (to make them slightly smaller for the carousel)
+            const baseClasses = isFavoriteCard 
+                ? 'w-40 flex-shrink-0 cursor-pointer rounded-lg overflow-hidden bg-gray-800 hover:bg-gray-700 transition duration-300 relative'
+                : 'result-card cursor-pointer rounded-lg overflow-hidden bg-gray-800 hover:bg-gray-700 transition duration-300 relative';
+            
+            card.className = baseClasses;
+            card.setAttribute('data-imdbid', item.imdbID);
+            card.setAttribute('data-type', item.Type);
+            card.setAttribute('data-title', item.Title);
+
+            // Heart icon logic: filled if favorited, outline if not.
+            const heartIcon = isFavorite 
+                ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 fill-red-gemini stroke-red-gemini" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="0" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>`
+                : `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>`;
+
+            // Create a JSON string representation of the item for the inline function call
+            const itemJson = JSON.stringify({
+                Title: item.Title,
+                Year: item.Year,
+                Type: item.Type,
+                Poster: item.Poster,
+                imdbID: item.imdbID
+            }).replace(/"/g, '&quot;'); // Escape quotes for HTML attribute
+
+            card.innerHTML = `
+                <img src="${item.Poster}" alt="${item.Title} Poster" 
+                     class="w-full h-auto object-cover" 
+                     onerror="this.onerror=null;this.src='https://placehold.co/300x450/1f2937/fff?text=No+Poster'">
+                
+                <!-- Favorite Toggle Button -->
+                <button class="absolute top-2 right-2 p-1 bg-black bg-opacity-70 rounded-full hover:bg-red-gemini transition duration-200" 
+                        title="${isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}" 
+                        onclick="event.stopPropagation(); window.handleFavoriteToggle(JSON.parse('${itemJson}'));">
+                    ${heartIcon}
+                </button>
+                
+                <div class="p-3">
+                    <h2 class="text-base font-semibold truncate text-white">${item.Title}</h2>
+                    <p class="text-xs text-gray-400">${item.Year} | ${item.Type === 'movie' ? 'Movie' : 'Series'}</p>
+                </div>
+            `;
+
+            // Attach event listener for video playback (on card click, not button click)
+            card.addEventListener('click', () => handleCardClick(item.Title, item.imdbID, item.Type));
+            return card;
+        }
+
+        // --- Core Search Functionality (Unchanged) ---
 
         /**
          * Fetches media from OMDb API based on the search query.
-         * Implements a simple retry mechanism (exponential backoff) for resilience.
          * @param {string} query - The search term.
          */
         async function searchMedia(query) {
@@ -298,9 +378,8 @@
                     
                     if (data.Response === "True") {
                         displayResults(data.Search);
-                        return; // Success, exit function
+                        return;
                     } else {
-                        // OMDb returns Response: "False" on no results
                         setStatus(`No results found for "${query}". Try a different search term.`);
                         return;
                     }
@@ -309,9 +388,8 @@
                     if (attempt === MAX_RETRIES - 1) {
                         setStatus(`Failed to fetch results after ${MAX_RETRIES} attempts. Network or API error. (Check console for details)`);
                         showMessage('Search failed due to a network or API issue.', 'error');
-                        return; // Max retries reached
+                        return;
                     }
-                    // Exponential backoff
                     const delay = Math.pow(2, attempt) * 1000;
                     await new Promise(resolve => setTimeout(resolve, delay));
                 }
@@ -327,32 +405,13 @@
             resultsContainer.innerHTML = '';
             
             results.filter(item => item.Poster !== 'N/A').forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'result-card cursor-pointer rounded-lg overflow-hidden bg-gray-800 hover:bg-gray-700 transition duration-300';
-                card.setAttribute('data-imdbid', item.imdbID);
-                card.setAttribute('data-type', item.Type);
-                card.setAttribute('data-title', item.Title);
-
-                card.innerHTML = `
-                    <img src="${item.Poster}" alt="${item.Title} Poster" 
-                         class="w-full h-auto object-cover" 
-                         onerror="this.onerror=null;this.src='https://placehold.co/300x450/1f2937/fff?text=No+Poster'">
-                    <div class="p-3">
-                        <h2 class="text-base font-semibold truncate text-white">${item.Title}</h2>
-                        <p class="text-xs text-gray-400">${item.Year} | ${item.Type === 'movie' ? 'Movie' : 'Series'}</p>
-                    </div>
-                `;
-
-                card.addEventListener('click', () => handleCardClick(item.Title, item.imdbID, item.Type));
+                const card = createMediaCard(item);
                 resultsContainer.appendChild(card);
             });
         }
 
         /**
          * Handles the click on a movie or series card.
-         * @param {string} title - The title of the media.
-         * @param {string} imdbID - The IMDb ID.
-         * @param {string} type - 'movie' or 'series'.
          */
         function handleCardClick(title, imdbID, type) {
             if (type === 'movie') {
@@ -366,8 +425,75 @@
         }
 
 
-        // --- Event Listeners ---
+        // --- Player and Modal Functions (Unchanged) ---
 
+        function showMessage(message, type = 'info') {
+            const color = type === 'error' ? 'border-red-500' : 'border-blue-500';
+            messageContent.textContent = message;
+            messageBox.className = `fixed bottom-5 right-5 z-50 bg-gray-800 text-white p-4 rounded-lg shadow-xl border-l-4 ${color} transition-opacity duration-300`;
+            messageBox.classList.remove('hidden');
+            
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+            }, 3000);
+        }
+
+        function setStatus(message, isLoading = false) {
+            resultsContainer.innerHTML = '';
+            statusMessage.textContent = message;
+            statusMessage.style.display = 'block';
+            if (isLoading) {
+                statusMessage.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-red-gemini inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Searching...`;
+            }
+        }
+
+        function showModal(title, imdbID) {
+            currentSeriesImdbId = imdbID;
+            document.getElementById('modalTitle').textContent = `Watch ${title}`;
+            document.getElementById('seasonInput').value = 1;
+            document.getElementById('episodeInput').value = 1;
+            episodeModal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            episodeModal.classList.add('hidden');
+            currentSeriesImdbId = null;
+        }
+
+        function openPlayer(url, title) {
+            playerTitle.textContent = title;
+            playerIframe.src = url;
+            playerModal.classList.remove('hidden');
+            showMessage(`Starting playback for: ${title}`, 'info');
+        }
+
+        function closePlayerModal() {
+            playerIframe.src = "";
+            playerModal.classList.add('hidden');
+        }
+        
+        function toggleFullScreen() {
+            const element = playerIframe;
+            if (!document.fullscreenElement) {
+                if (element.requestFullscreen) {
+                    element.requestFullscreen();
+                } else if (element.webkitRequestFullscreen) {
+                    element.webkitRequestFullscreen();
+                } else if (element.msRequestFullscreen) {
+                    element.msRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        }
+
+        // --- Event Listeners ---
         searchButton.addEventListener('click', () => {
             searchMedia(searchInput.value);
         });
@@ -375,7 +501,6 @@
         watchEpisodeButton.addEventListener('click', () => {
             const season = document.getElementById('seasonInput').value;
             const episode = document.getElementById('episodeInput').value;
-            // Extract the base title from the modal title (e.g., "Watch Stranger Things" -> "Stranger Things")
             const baseTitle = document.getElementById('modalTitle').textContent.replace('Watch ', ''); 
             
             if (!currentSeriesImdbId || !season || !episode || season < 1 || episode < 1) {
@@ -385,16 +510,17 @@
 
             const url = `https://vidsrc-embed.ru/embed/tv?imdb=${currentSeriesImdbId}&season=${season}&episode=${episode}`;
             closeModal();
-            // Send the constructed title to the player modal
             openPlayer(url, `${baseTitle} - S${season} E${episode}`);
         });
         
-        // Close modal when clicking outside of it
         episodeModal.addEventListener('click', (e) => {
             if (e.target.id === 'episodeModal') {
                 closeModal();
             }
         });
+        
+        // Expose the handler globally for inline onclick attribute in dynamic HTML
+        window.handleFavoriteToggle = handleFavoriteToggle;
 
     </script>
 </body>
