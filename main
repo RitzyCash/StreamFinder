@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamFinder - Netflix Style</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom Font Setup & Base Styling */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d0d0d; /* Very dark background */
+        }
+        .text-red-gemini {
+            color: #E50914; /* Netflix Red */
+        }
+        .bg-red-gemini {
+            background-color: #E50914;
+        }
+        /* Custom Scrollbar for a sleek look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        .result-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .result-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+        }
+        .episode-modal-input {
+            appearance: textfield; /* Fix for Firefox */
+        }
+        .episode-modal-input::-webkit-outer-spin-button,
+        .episode-modal-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-white">
+
+    <!-- Header & Navigation -->
+    <header class="sticky top-0 z-50 bg-gray-900 shadow-lg border-b border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center">
+            <h1 class="text-3xl font-bold text-red-gemini mb-4 md:mb-0">
+                STREAM<span class="text-white">FINDER</span>
+            </h1>
+
+            <!-- Search Bar -->
+            <div class="w-full md:w-auto flex space-x-2">
+                <input type="text" id="searchInput" placeholder="Search for a movie or TV show..."
+                       class="w-full md:w-80 p-3 rounded-lg bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-gemini transition duration-200"
+                       onkeydown="if(event.key === 'Enter') document.getElementById('searchButton').click()">
+                <button id="searchButton"
+                        class="bg-red-gemini hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition duration-200 whitespace-nowrap">
+                    Search
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Status/Error Message Area -->
+        <div id="statusMessage" class="text-center p-4 text-lg font-semibold text-gray-400">
+            Start searching for your favorite titles!
+        </div>
+
+        <!-- Results Grid -->
+        <section id="resultsContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 pt-4">
+            <!-- Movie/TV Show cards will be injected here -->
+        </section>
+    </main>
+
+    <!-- Episode Selection Modal (Hidden by default) -->
+    <div id="episodeModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 p-8 rounded-xl shadow-2xl w-full max-w-sm border-t-4 border-red-gemini">
+            <h3 class="text-2xl font-bold mb-4 text-white" id="modalTitle">Select Episode</h3>
+            <p class="text-gray-300 mb-6">Enter the season and episode number to start watching this series.</p>
+            
+            <div class="flex space-x-4 mb-6">
+                <div class="flex-1">
+                    <label for="seasonInput" class="block text-sm font-medium text-gray-400 mb-1">Season (S)</label>
+                    <input type="number" id="seasonInput" value="1" min="1"
+                           class="episode-modal-input w-full p-3 rounded-lg bg-gray-700 border border-gray-600 focus:ring-red-gemini focus:border-red-gemini text-white">
+                </div>
+                <div class="flex-1">
+                    <label for="episodeInput" class="block text-sm font-medium text-gray-400 mb-1">Episode (E)</label>
+                    <input type="number" id="episodeInput" value="1" min="1"
+                           class="episode-modal-input w-full p-3 rounded-lg bg-gray-700 border border-gray-600 focus:ring-red-gemini focus:border-red-gemini text-white">
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeModal()" class="px-4 py-2 text-gray-300 rounded-lg hover:bg-gray-700 transition duration-150">
+                    Cancel
+                </button>
+                <button id="watchEpisodeButton" class="bg-red-gemini hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-150">
+                    Watch Now
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PLAYER MODAL (NEW) -->
+    <div id="playerModal" class="hidden fixed inset-0 bg-black bg-opacity-90 z-[60] flex flex-col items-center justify-center p-4">
+        <div class="w-full h-full max-w-5xl max-h-[80vh] relative">
+            <!-- Control Buttons (Fullscreen and Close) -->
+            <div class="absolute -top-10 right-0 md:-top-12 md:right-0 z-50 flex space-x-2">
+                <!-- Fullscreen Button -->
+                <button onclick="toggleFullScreen()" id="fullscreenButton" title="Toggle Fullscreen" class="text-white bg-gray-800 hover:bg-red-gemini p-2 rounded-full transition duration-200">
+                    <svg id="fullscreenIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <!-- Expand Icon -->
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+                    </svg>
+                </button>
+                <!-- Close Button -->
+                <button onclick="closePlayerModal()" title="Close Player" class="text-white bg-gray-800 hover:bg-red-gemini p-2 rounded-full transition duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <!-- Title -->
+            <h3 id="playerTitle" class="text-xl font-bold mb-2 text-white truncate w-full"></h3>
+            <!-- Iframe Container - Uses aspect-video for responsive 16:9 ratio -->
+            <div class="aspect-video w-full bg-black rounded-lg overflow-hidden shadow-2xl border-2 border-gray-700">
+                <iframe id="playerIframe" src="" frameborder="0" allowfullscreen allow="autoplay; encrypted-media" class="w-full h-full"></iframe>
+            </div>
+        </div>
+    </div>
+    <!-- END PLAYER MODAL -->
+
+    <!-- Message Box (For alerts/errors) -->
+    <div id="messageBox" class="hidden fixed bottom-5 right-5 z-50 bg-gray-800 text-white p-4 rounded-lg shadow-xl border-l-4 border-red-gemini transition-opacity duration-300">
+        <p id="messageContent" class="font-medium"></p>
+    </div>
+
+    <script>
+        // --- API Configuration ---
+        const API_KEY = "89183001";
+        const OMDB_BASE_URL = "https://www.omdbapi.com/?apikey=" + API_KEY + "&s=";
+
+        // --- DOM Elements ---
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const statusMessage = document.getElementById('statusMessage');
+        const messageBox = document.getElementById('messageBox');
+        const messageContent = document.getElementById('messageContent');
+        const episodeModal = document.getElementById('episodeModal');
+        const watchEpisodeButton = document.getElementById('watchEpisodeButton');
+        
+        // NEW PLAYER ELEMENTS
+        const playerModal = document.getElementById('playerModal');
+        const playerIframe = document.getElementById('playerIframe');
+        const playerTitle = document.getElementById('playerTitle');
+        const fullscreenButton = document.getElementById('fullscreenButton'); // New
+
+        let currentSeriesImdbId = null; // Store the ID for the modal watch button
+
+        // --- Utility Functions ---
+
+        /**
+         * Displays a temporary notification message instead of using alert().
+         * @param {string} message - The message to display.
+         * @param {string} [type='info'] - The type ('error', 'info').
+         */
+        function showMessage(message, type = 'info') {
+            const color = type === 'error' ? 'border-red-500' : 'border-blue-500';
+            messageContent.textContent = message;
+            messageBox.className = `fixed bottom-5 right-5 z-50 bg-gray-800 text-white p-4 rounded-lg shadow-xl border-l-4 ${color} transition-opacity duration-300`;
+            messageBox.classList.remove('hidden');
+            
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+            }, 3000);
+        }
+
+        /**
+         * Clears results and sets a status message.
+         * @param {string} message - The message to display.
+         * @param {boolean} isLoading - Whether to show a loading indicator.
+         */
+        function setStatus(message, isLoading = false) {
+            resultsContainer.innerHTML = '';
+            statusMessage.textContent = message;
+            statusMessage.style.display = 'block';
+            if (isLoading) {
+                // Simple loading spinner
+                statusMessage.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-red-gemini inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Searching...`;
+            }
+        }
+
+        // --- Modal Control (Episode Selection) ---
+
+        /** Shows the episode selection modal for a series. */
+        function showModal(title, imdbID) {
+            currentSeriesImdbId = imdbID;
+            document.getElementById('modalTitle').textContent = `Watch ${title}`;
+            // Reset to default S1 E1
+            document.getElementById('seasonInput').value = 1;
+            document.getElementById('episodeInput').value = 1;
+            episodeModal.classList.remove('hidden');
+        }
+
+        /** Hides the episode selection modal. */
+        function closeModal() {
+            episodeModal.classList.add('hidden');
+            currentSeriesImdbId = null;
+        }
+
+        // --- Modal Control (Player Embed) ---
+
+        /**
+         * Opens the constructed player URL in the embedded modal.
+         * @param {string} url - The final embed URL.
+         * @param {string} title - The title of the media.
+         */
+        function openPlayer(url, title) {
+            playerTitle.textContent = title;
+            playerIframe.src = url;
+            playerModal.classList.remove('hidden');
+            showMessage(`Starting playback for: ${title}`, 'info');
+        }
+
+        /** Closes the embedded player modal and stops playback. */
+        function closePlayerModal() {
+            // Clear iframe source to stop playback and release resources
+            playerIframe.src = "";
+            playerModal.classList.add('hidden');
+        }
+        
+        /**
+         * Toggles fullscreen mode for the player iframe.
+         * Requests fullscreen on the iframe element to allow native video player control.
+         */
+        function toggleFullScreen() {
+            // We request fullscreen on the iframe element itself
+            const element = playerIframe;
+
+            if (!document.fullscreenElement) {
+                // Enter fullscreen
+                if (element.requestFullscreen) {
+                    element.requestFullscreen();
+                } else if (element.webkitRequestFullscreen) { /* Safari */
+                    element.webkitRequestFullscreen();
+                } else if (element.msRequestFullscreen) { /* IE11 */
+                    element.msRequestFullscreen();
+                }
+            } else {
+                // Exit fullscreen
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) { /* Safari */
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) { /* IE11 */
+                    document.msExitFullscreen();
+                }
+            }
+        }
+
+        // --- Core Search Functionality ---
+
+        /**
+         * Fetches media from OMDb API based on the search query.
+         * Implements a simple retry mechanism (exponential backoff) for resilience.
+         * @param {string} query - The search term.
+         */
+        async function searchMedia(query) {
+            if (query.trim() === '') {
+                showMessage('Please enter a search term.', 'error');
+                return;
+            }
+
+            setStatus(query, true);
+            const encodedQuery = encodeURIComponent(query.trim());
+            const url = OMDB_BASE_URL + encodedQuery;
+
+            const MAX_RETRIES = 3;
+            for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    
+                    const data = await response.json();
+                    
+                    if (data.Response === "True") {
+                        displayResults(data.Search);
+                        return; // Success, exit function
+                    } else {
+                        // OMDb returns Response: "False" on no results
+                        setStatus(`No results found for "${query}". Try a different search term.`);
+                        return;
+                    }
+                } catch (error) {
+                    console.error(`Attempt ${attempt + 1} failed:`, error);
+                    if (attempt === MAX_RETRIES - 1) {
+                        setStatus(`Failed to fetch results after ${MAX_RETRIES} attempts. Network or API error. (Check console for details)`);
+                        showMessage('Search failed due to a network or API issue.', 'error');
+                        return; // Max retries reached
+                    }
+                    // Exponential backoff
+                    const delay = Math.pow(2, attempt) * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        }
+
+        /**
+         * Renders the search results into the container.
+         * @param {Array<Object>} results - Array of media objects from OMDb.
+         */
+        function displayResults(results) {
+            statusMessage.style.display = 'none';
+            resultsContainer.innerHTML = '';
+            
+            results.filter(item => item.Poster !== 'N/A').forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'result-card cursor-pointer rounded-lg overflow-hidden bg-gray-800 hover:bg-gray-700 transition duration-300';
+                card.setAttribute('data-imdbid', item.imdbID);
+                card.setAttribute('data-type', item.Type);
+                card.setAttribute('data-title', item.Title);
+
+                card.innerHTML = `
+                    <img src="${item.Poster}" alt="${item.Title} Poster" 
+                         class="w-full h-auto object-cover" 
+                         onerror="this.onerror=null;this.src='https://placehold.co/300x450/1f2937/fff?text=No+Poster'">
+                    <div class="p-3">
+                        <h2 class="text-base font-semibold truncate text-white">${item.Title}</h2>
+                        <p class="text-xs text-gray-400">${item.Year} | ${item.Type === 'movie' ? 'Movie' : 'Series'}</p>
+                    </div>
+                `;
+
+                card.addEventListener('click', () => handleCardClick(item.Title, item.imdbID, item.Type));
+                resultsContainer.appendChild(card);
+            });
+        }
+
+        /**
+         * Handles the click on a movie or series card.
+         * @param {string} title - The title of the media.
+         * @param {string} imdbID - The IMDb ID.
+         * @param {string} type - 'movie' or 'series'.
+         */
+        function handleCardClick(title, imdbID, type) {
+            if (type === 'movie') {
+                const url = `https://vidsrc-embed.ru/embed/movie/${imdbID}`;
+                openPlayer(url, title);
+            } else if (type === 'series') {
+                showModal(title, imdbID);
+            } else {
+                showMessage(`Unsupported media type: ${type}.`, 'error');
+            }
+        }
+
+
+        // --- Event Listeners ---
+
+        searchButton.addEventListener('click', () => {
+            searchMedia(searchInput.value);
+        });
+
+        watchEpisodeButton.addEventListener('click', () => {
+            const season = document.getElementById('seasonInput').value;
+            const episode = document.getElementById('episodeInput').value;
+            // Extract the base title from the modal title (e.g., "Watch Stranger Things" -> "Stranger Things")
+            const baseTitle = document.getElementById('modalTitle').textContent.replace('Watch ', ''); 
+            
+            if (!currentSeriesImdbId || !season || !episode || season < 1 || episode < 1) {
+                showMessage('Please enter valid Season and Episode numbers.', 'error');
+                return;
+            }
+
+            const url = `https://vidsrc-embed.ru/embed/tv?imdb=${currentSeriesImdbId}&season=${season}&episode=${episode}`;
+            closeModal();
+            // Send the constructed title to the player modal
+            openPlayer(url, `${baseTitle} - S${season} E${episode}`);
+        });
+        
+        // Close modal when clicking outside of it
+        episodeModal.addEventListener('click', (e) => {
+            if (e.target.id === 'episodeModal') {
+                closeModal();
+            }
+        });
+
+    </script>
+</body>
+</html>
