@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StreamFinder - Netflix Style</title>
+    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Custom Font Setup & Base Styling */
@@ -65,16 +66,22 @@
             opacity: 0;
             margin-bottom: 0 !important; /* Override mb-12 on the section */
         }
+        /* Style for the icon rotation */
+        .icon-rotated {
+            transform: rotate(-180deg) !important; /* Fix for proper up/down toggle */
+        }
     </style>
 </head>
 <body class="min-h-screen text-white">
 
+    <!-- Header & Navigation -->
     <header class="sticky top-0 z-50 bg-gray-900 shadow-lg border-b border-gray-800">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center">
             <h1 class="text-3xl font-bold text-red-gemini mb-4 md:mb-0">
                 STREAM<span class="text-white">FINDER</span>
             </h1>
 
+            <!-- Search Bar -->
             <div class="w-full md:w-auto flex space-x-2">
                 <input type="text" id="searchInput" placeholder="Search for a movie or TV show..."
                        class="w-full md:w-80 p-3 rounded-lg bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-gemini transition duration-200"
@@ -87,37 +94,46 @@
         </div>
     </header>
 
+    <!-- Main Content Area -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
+        <!-- Favorites Section -->
         <section id="favoritesSection" class="mb-12">
             <div class="flex items-center space-x-3 mb-4">
                 <h2 class="text-2xl font-bold text-white">Your Favorites</h2>
                 <button id="toggleFavoritesButton" 
                         class="p-1 rounded-full text-white hover:text-red-gemini transition duration-150"
-                        title="Toggle Favorites View">
+                        title="Hide Favorites View">
+                    <!-- Initial state: Down arrow for "collapse" (default rotation is 0) -->
                     <svg id="favoritesToggleIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transform transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                     </svg>
                 </button>
             </div>
             
+            <!-- Favorites Content Wrapper -->
             <div id="favoritesContent">
                 <div id="favoritesContainer" class="flex overflow-x-scroll space-x-4 no-scrollbar pb-4">
                     <p id="favoritesStatus" class="text-gray-400">Loading favorites...</p>
-                    </div>
+                    <!-- Favorite cards will be rendered here -->
+                </div>
             </div>
         </section>
         
         <h2 class="text-2xl font-bold text-white mb-4">Search Results</h2>
         
+        <!-- Status/Error Message Area -->
         <div id="statusMessage" class="text-center p-4 text-lg font-semibold text-gray-400">
             Start searching for your favorite titles!
         </div>
 
+        <!-- Results Grid -->
         <section id="resultsContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 pt-4">
-            </section>
+            <!-- Movie/TV Show cards will be injected here -->
+        </section>
     </main>
 
+    <!-- Episode Selection Modal (Hidden by default) -->
     <div id="episodeModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-[70] flex items-center justify-center p-4">
         <div class="bg-gray-800 p-8 rounded-xl shadow-2xl w-full max-w-sm border-t-4 border-red-gemini">
             <h3 class="text-2xl font-bold mb-4 text-white" id="modalTitle">Select Episode</h3>
@@ -147,26 +163,36 @@
         </div>
     </div>
 
+    <!-- PLAYER MODAL -->
     <div id="playerModal" class="hidden fixed inset-0 bg-black bg-opacity-90 z-[80] flex flex-col items-center justify-center p-4">
         <div class="w-full h-full max-w-5xl max-h-[80vh] relative">
+            <!-- Control Buttons (Fullscreen and Close) -->
             <div class="absolute -top-10 right-0 md:-top-12 md:right-0 z-50 flex space-x-2">
+                <!-- Fullscreen Button -->
                 <button onclick="toggleFullScreen()" id="fullscreenButton" title="Toggle Fullscreen" class="text-white bg-gray-800 hover:bg-red-gemini p-2 rounded-full transition duration-200">
                     <svg id="fullscreenIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <!-- Expand Icon -->
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
                     </svg>
                 </button>
+                <!-- Close Button -->
                 <button onclick="closePlayerModal()" title="Close Player" class="text-white bg-gray-800 hover:bg-red-gemini p-2 rounded-full transition duration-200">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
             </div>
+            <!-- Title -->
             <h3 id="playerTitle" class="text-xl font-bold mb-2 text-white truncate w-full"></h3>
+            <!-- Iframe Container - Uses aspect-video for responsive 16:9 ratio -->
             <div class="aspect-video w-full bg-black rounded-lg overflow-hidden shadow-2xl border-2 border-gray-700">
                 <iframe id="playerIframe" src="" frameborder="0" allowfullscreen allow="autoplay; encrypted-media" class="w-full h-full"></iframe>
             </div>
         </div>
     </div>
+    <!-- END PLAYER MODAL -->
+
+    <!-- Message Box (For alerts/errors) -->
     <div id="messageBox" class="hidden fixed bottom-5 right-5 z-50 bg-gray-800 text-white p-4 rounded-lg shadow-xl border-l-4 border-red-gemini transition-opacity duration-300">
         <p id="messageContent" class="font-medium"></p>
     </div>
@@ -176,6 +202,7 @@
         const API_KEY = "89183001";
         const OMDB_BASE_URL = "https://www.omdbapi.com/?apikey=" + API_KEY + "&s=";
         const LOCAL_STORAGE_KEY = "streamFinderFavorites";
+        const VISIBLE_KEY = "streamFinderFavoritesVisible";
 
         // --- DOM Elements ---
         const searchInput = document.getElementById('searchInput');
@@ -187,36 +214,120 @@
         const episodeModal = document.getElementById('episodeModal');
         const watchEpisodeButton = document.getElementById('watchEpisodeButton');
         const favoritesContainer = document.getElementById('favoritesContainer');
-        const favoritesStatus = document.getElementById('favoritesStatus');
-        
+
         const playerModal = document.getElementById('playerModal');
         const playerIframe = document.getElementById('playerIframe');
         const playerTitle = document.getElementById('playerTitle');
-        
-        // NEW FAVORITES ELEMENTS
+
+        // FAVORITES ELEMENTS
         const toggleFavoritesButton = document.getElementById('toggleFavoritesButton');
         const favoritesContent = document.getElementById('favoritesContent');
         const favoritesToggleIcon = document.getElementById('favoritesToggleIcon');
 
+        let currentSeriesImdbId = null;
 
-        let currentSeriesImdbId = null; 
-        
         // Global state for fast lookup of favorited items (IMDb ID)
         const userFavorites = new Set();
-        
+
         // State variable for favorites visibility
         let favoritesVisible = true;
 
+        // Simple in-memory cache for searches
+        const resultsCache = new Map();
 
-        // --- Local Storage Initialization ---
+        // Prevent multiple simultaneous searches
+        let isSearching = false;
+
+        // Search button original HTML (used to restore after spinner)
+        const originalSearchButtonHTML = searchButton ? searchButton.innerHTML : 'Search';
+
+        // IntersectionObserver for lazy posters (initialized on load)
+        let posterObserver = null;
+
+        // --- Utilities ---
+        function debounce(fn, wait = 350) {
+            let t = null;
+            return (...args) => {
+                clearTimeout(t);
+                t = setTimeout(() => fn(...args), wait);
+            };
+        }
+
+        // --- Local Storage & Initialization ---
         window.onload = function() {
+            // Init poster observer
+            if ('IntersectionObserver' in window) {
+                posterObserver = new IntersectionObserver((entries, obs) => {
+                    entries.forEach(en => {
+                        if (en.isIntersecting) {
+                            const img = en.target;
+                            const src = img.dataset.src;
+                            if (src) img.src = src;
+                            img.removeAttribute('data-src');
+                            obs.unobserve(img);
+                        }
+                    });
+                }, { rootMargin: '200px', threshold: 0.01 });
+            }
+
+            // Ensure toggle button exists before attaching
+            if (toggleFavoritesButton) {
+                toggleFavoritesButton.addEventListener('click', () => toggleFavoritesVisibility());
+                toggleFavoritesButton.setAttribute('role', 'button');
+            }
+
             loadFavoritesFromLocalStorage();
-            // Initial setup for the toggle button
-            toggleFavoritesButton.addEventListener('click', toggleFavoritesVisibility);
+
+            // Read persisted favorites visibility (default: true)
+            const storedVisible = localStorage.getItem(VISIBLE_KEY);
+            const initialVisible = storedVisible === null ? true : storedVisible === 'true';
+            toggleFavoritesVisibility(initialVisible);
+
+            // Event listeners
+            searchButton.addEventListener('click', () => {
+                if (isSearching) return;
+                searchMedia(searchInput.value.trim());
+            });
+
+            // Debounced search on input (typing)
+            const debouncedSearch = debounce((q) => {
+                if (isSearching) return;
+                if (!q || q.length === 0) return;
+                searchMedia(q);
+            }, 450);
+            searchInput.addEventListener('input', (e) => debouncedSearch(e.target.value.trim()));
+
+            // Watch episode button
+            watchEpisodeButton.addEventListener('click', () => {
+                const season = parseInt(document.getElementById('seasonInput').value || '1', 10) || 1;
+                const episode = parseInt(document.getElementById('episodeInput').value || '1', 10) || 1;
+
+                if (!currentSeriesImdbId) {
+                    showMessage('No series selected.', 'error');
+                    closeModal();
+                    return;
+                }
+
+                // Build reasonably safe embed URL (format assumed by player provider)
+                const url = `https://vidsrc-embed.ru/embed/series/${encodeURIComponent(currentSeriesImdbId)}/season-${season}-episode-${episode}`;
+                openPlayer(url, document.getElementById('modalTitle').textContent || 'Series');
+                closeModal();
+            });
+
+            // ESC key closes modals
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    if (!episodeModal.classList.contains('hidden')) closeModal();
+                    if (!playerModal.classList.contains('hidden')) closePlayerModal();
+                }
+            });
         };
 
         // --- Favorites Visibility Logic ---
-
+        /**
+         * Toggles the visibility of the favorites section.
+         * @param {boolean} [forceState=null] - If provided, forces the visibility state (true=show, false=hide).
+         */
         function toggleFavoritesVisibility(forceState = null) {
             if (forceState !== null) {
                 favoritesVisible = forceState;
@@ -224,73 +335,87 @@
                 favoritesVisible = !favoritesVisible;
             }
 
+            // Persist preference
+            try { localStorage.setItem(VISIBLE_KEY, String(favoritesVisible)); } catch (e) { /* ignore */ }
+
+            // Safety checks
+            if (!favoritesContent || !favoritesToggleIcon || !toggleFavoritesButton) return;
+
+            // Set aria-expanded to help screen readers
+            toggleFavoritesButton.setAttribute('aria-expanded', String(favoritesVisible));
+
             if (favoritesVisible) {
+                // Show: remove hidden class and expand to natural height for transition
                 favoritesContent.classList.remove('favorites-hidden');
-                favoritesToggleIcon.style.transform = 'rotate(0deg)'; // Down arrow
+                const fullHeight = favoritesContent.scrollHeight;
+                favoritesContent.style.overflow = 'hidden';
+                favoritesContent.style.maxHeight = fullHeight + 'px';
+                favoritesContent.style.opacity = '1';
+                favoritesContent.style.pointerEvents = 'auto';
+
+                // Rotate icon to "down" state
+                favoritesToggleIcon.classList.remove('icon-rotated');
                 toggleFavoritesButton.title = 'Hide Favorites View';
+
+                setTimeout(() => {
+                    if (favoritesVisible) favoritesContent.style.maxHeight = '';
+                }, 350);
             } else {
-                favoritesContent.classList.add('favorites-hidden');
-                favoritesToggleIcon.style.transform = 'rotate(-90deg)'; // Arrow points left (or up for ^)
+                // Hide: set explicit height then collapse to 0 to animate cleanly
+                const currentHeight = favoritesContent.scrollHeight;
+                favoritesContent.style.overflow = 'hidden';
+                favoritesContent.style.maxHeight = currentHeight + 'px';
+                // Force reflow
+                // eslint-disable-next-line no-unused-expressions
+                favoritesContent.offsetHeight;
+                favoritesContent.style.maxHeight = '0px';
+                favoritesContent.style.opacity = '0';
+                favoritesContent.style.pointerEvents = 'none';
+
+                // Rotate icon to "up" state
+                favoritesToggleIcon.classList.add('icon-rotated');
                 toggleFavoritesButton.title = 'Show Favorites View';
             }
         }
-        
-        // Set the initial state on load
-        toggleFavoritesVisibility(true);
 
-
-        /**
-         * Loads the favorites array from Local Storage, populates the set, and renders the UI.
-         */
+        // --- Favorites Management ---
         function loadFavoritesFromLocalStorage() {
             userFavorites.clear();
-            
-            // Check if favoritesStatus exists before setting its text
-            if (favoritesStatus) {
-                favoritesStatus.textContent = "Loading favorites...";
-            }
+            if (favoritesContainer) favoritesContainer.innerHTML = ''; // reset while loading
 
+            let storedFavorites = [];
             try {
                 const storedJson = localStorage.getItem(LOCAL_STORAGE_KEY);
-                const storedFavorites = storedJson ? JSON.parse(storedJson) : [];
-                
-                // Populate the Set for quick lookups
-                storedFavorites.forEach(item => {
-                    userFavorites.add(item.imdbID);
-                });
-                
-                // Render the list
-                renderFavorites(storedFavorites);
+                storedFavorites = storedJson ? JSON.parse(storedJson) : [];
             } catch (error) {
-                console.error("Error loading favorites from local storage:", error);
-                if (favoritesStatus) {
-                    favoritesStatus.textContent = "Error loading local favorites data. Clear browser cache if issue persists.";
-                }
-                renderFavorites([]);
+                console.error("Error parsing favorites from localStorage:", error);
+                storedFavorites = [];
+            }
+
+            storedFavorites.forEach(item => {
+                if (item && item.imdbID) userFavorites.add(item.imdbID);
+            });
+
+            if (!storedFavorites || storedFavorites.length === 0) {
+                // show friendly message inside favorites container
+                const status = document.createElement('p');
+                status.className = 'text-gray-400';
+                status.textContent = "No favorites added yet. Search and click the heart icon to save titles!";
+                if (favoritesContainer) favoritesContainer.appendChild(status);
+            } else {
+                renderFavorites(storedFavorites);
             }
         }
-
-        // --- Favorites Rendering & Logic ---
 
         /**
          * Renders the favorite items in the dedicated section.
          * @param {Array<Object>} favorites - Array of favorite media objects.
          */
         function renderFavorites(favorites) {
+            if (!favoritesContainer) return;
             favoritesContainer.innerHTML = '';
-            
-            if (favorites.length === 0) {
-                const status = document.createElement('p');
-                status.id = 'favoritesStatus';
-                status.className = 'text-gray-400';
-                status.textContent = "No favorites added yet. Search and click the heart icon to save titles!";
-                favoritesContainer.appendChild(status);
-                return;
-            }
-            
-            // Render favorite cards
             favorites.forEach(item => {
-                const card = createMediaCard(item, true); // true for isFavoriteCard
+                const card = createMediaCard(item, true);
                 favoritesContainer.appendChild(card);
             });
         }
@@ -301,19 +426,17 @@
          */
         function handleFavoriteToggle(item) {
             const { imdbID, Title } = item;
-
             try {
                 const storedJson = localStorage.getItem(LOCAL_STORAGE_KEY);
                 let favoritesArray = storedJson ? JSON.parse(storedJson) : [];
                 let message = '';
-                
+
                 if (userFavorites.has(imdbID)) {
                     // REMOVE from favorites
                     favoritesArray = favoritesArray.filter(fav => fav.imdbID !== imdbID);
                     message = `Removed "${Title}" from favorites!`;
                 } else {
                     // ADD to favorites
-                    // Ensure only the necessary properties are saved
                     favoritesArray.push({
                         Title: item.Title,
                         Year: item.Year,
@@ -323,29 +446,24 @@
                         addedAt: new Date().toISOString()
                     });
                     message = `Added "${Title}" to favorites!`;
-                    // When adding a new favorite, ensure the section is visible
+                    // show favorites to give feedback
                     toggleFavoritesVisibility(true);
                 }
 
-                // Save the updated array back to local storage
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(favoritesArray));
-                
-                // Manually trigger UI update to reflect the change
+                // reload favorites and UI state
                 loadFavoritesFromLocalStorage();
-                
                 showMessage(message, 'info');
-
             } catch (error) {
                 console.error("Error toggling favorite status in local storage:", error);
                 showMessage(`Failed to update favorites for "${Title}".`, 'error');
             }
         }
 
-
         // --- UI Component Creation ---
-
         /**
          * Creates a single media card element.
+         * Keeps innerHTML usage as requested; adds lazy-loading via data-src + loading attribute.
          * @param {Object} item - The media item data.
          * @param {boolean} [isFavoriteCard=false] - Whether this card is being rendered in the Favorites section.
          * @returns {HTMLElement} The card element.
@@ -353,85 +471,136 @@
         function createMediaCard(item, isFavoriteCard = false) {
             const isFavorite = userFavorites.has(item.imdbID);
             const card = document.createElement('div');
-            
-            // Use different styling if it's a favorite card (to make them slightly smaller for the carousel)
-            const baseClasses = isFavoriteCard 
+
+            const baseClasses = isFavoriteCard
                 ? 'w-40 flex-shrink-0 cursor-pointer rounded-lg overflow-hidden bg-gray-800 hover:bg-gray-700 transition duration-300 relative'
                 : 'result-card cursor-pointer rounded-lg overflow-hidden bg-gray-800 hover:bg-gray-700 transition duration-300 relative';
-            
+
             card.className = baseClasses;
             card.setAttribute('data-imdbid', item.imdbID);
             card.setAttribute('data-type', item.Type);
             card.setAttribute('data-title', item.Title);
 
-            // Heart icon logic: filled if favorited, outline if not.
-            const heartIcon = isFavorite 
-                ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 fill-red-gemini stroke-red-gemini" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="0" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>`
-                : `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>`;
+            const posterSrc = (item.Poster && item.Poster !== 'N/A') ? item.Poster : 'https://placehold.co/300x450/1f2937/fff?text=No+Poster';
 
+            // Use data-src + loading="lazy" so IntersectionObserver or native lazy-loading can pick it up
             card.innerHTML = `
-                <img src="${item.Poster}" alt="${item.Title} Poster" 
-                     class="w-full h-auto object-cover" 
-                     onerror="this.onerror=null;this.src='https://placehold.co/300x450/1f2937/fff?text=No+Poster'">
-                
-                <button class="absolute top-2 right-2 p-1 bg-black bg-opacity-70 rounded-full hover:bg-red-gemini transition duration-200" 
-                        title="${isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}" 
-                        data-item-details='${JSON.stringify({ Title: item.Title, Year: item.Year, Type: item.Type, Poster: item.Poster, imdbID: item.imdbID })}'
-                        onclick="event.stopPropagation(); this.handleFavoriteClick(this);">
-                    ${heartIcon}
-                </button>
-                
+                <img data-src="${posterSrc}" loading="lazy" src="https://placehold.co/10x15/1f2937/111" alt="${item.Title} Poster" class="w-full h-auto object-cover">
+
+                <div class="absolute top-2 right-2 p-1 bg-black bg-opacity-70 rounded-full transition duration-200 favorite-btn-wrapper" title="${isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}" role="button" aria-label="${isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}">
+                    ${isFavorite ?
+                        `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 fill-red-gemini stroke-red-gemini" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="0" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>`
+                        :
+                        `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>`
+                    }
+                </div>
+
                 <div class="p-3">
                     <h2 class="text-base font-semibold truncate text-white">${item.Title}</h2>
                     <p class="text-xs text-gray-400">${item.Year} | ${item.Type === 'movie' ? 'Movie' : 'Series'}</p>
                 </div>
             `;
 
-            // Attach a cleaner handler for the dynamically created favorite button
-            // The handler pulls data from the data-item-details attribute
-            const favoriteButton = card.querySelector('button');
-            favoriteButton.handleFavoriteClick = function(button) {
-                const itemData = JSON.parse(button.getAttribute('data-item-details'));
-                window.handleFavoriteToggle(itemData);
-            };
+            // Attach favorite button listener (safe, prevents propagation to card click)
+            const favWrapper = card.querySelector('.favorite-btn-wrapper');
+            if (favWrapper) {
+                favWrapper.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handleFavoriteToggle({
+                        Title: item.Title,
+                        Year: item.Year,
+                        Type: item.Type,
+                        Poster: item.Poster,
+                        imdbID: item.imdbID
+                    });
+                });
+                favWrapper.setAttribute('tabindex', '0');
+            }
 
-            // Attach event listener for video playback (on card click, not button click)
+            // Card click opens player or modal
             card.addEventListener('click', () => handleCardClick(item.Title, item.imdbID, item.Type));
+
+            // Lazy-load poster: observe or fallback to setting src
+            const img = card.querySelector('img');
+            if (img) {
+                if (posterObserver) {
+                    posterObserver.observe(img);
+                } else {
+                    // Fallback: set src immediately (native loading="lazy" may still defer)
+                    const ds = img.dataset.src;
+                    if (ds) img.src = ds;
+                    img.removeAttribute('data-src');
+                }
+            }
+
             return card;
         }
 
-        // --- Core Search Functionality (Modified) ---
-
-        /**
-         * Fetches media from OMDb API based on the search query.
-         * @param {string} query - The search term.
-         */
+        // --- Core Search Functionality ---
         async function searchMedia(query) {
-            if (query.trim() === '') {
+            if (!query || query.trim() === '') {
                 showMessage('Please enter a search term.', 'error');
                 return;
             }
 
-            // NEW: Hide favorites when a search is initiated
-            toggleFavoritesVisibility(false);
-            
-            setStatus(query, true);
-            const encodedQuery = encodeURIComponent(query.trim());
-            const url = OMDB_BASE_URL + encodedQuery;
+            if (isSearching) return;
 
+            // If favorites are currently visible, hide them so search results are fully visible
+            if (favoritesVisible && typeof toggleFavoritesVisibility === 'function') {
+                toggleFavoritesVisibility(false);
+            }
+
+            // Update UI: show spinner in search button and set status
+            setStatus(query, true);
+            if (searchButton) {
+                searchButton.disabled = true;
+                searchButton.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>Searching...`;
+                searchButton.classList.add('opacity-60', 'cursor-not-allowed');
+            }
+
+            const encodedQuery = encodeURIComponent(query.trim());
+            const cacheKey = encodedQuery.toLowerCase();
+
+            // Use cache when available
+            if (resultsCache.has(cacheKey)) {
+                showMessage('Showing cached results', 'info');
+                displayResults(resultsCache.get(cacheKey), true);
+                if (searchButton) {
+                    searchButton.disabled = false;
+                    searchButton.innerHTML = originalSearchButtonHTML;
+                    searchButton.classList.remove('opacity-60', 'cursor-not-allowed');
+                }
+                return;
+            }
+
+            isSearching = true;
+
+            const url = OMDB_BASE_URL + encodedQuery;
             const MAX_RETRIES = 3;
             for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
                 try {
                     const response = await fetch(url);
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    
                     const data = await response.json();
-                    
-                    if (data.Response === "True") {
-                        displayResults(data.Search);
+
+                    if (data.Response === "True" && Array.isArray(data.Search)) {
+                        resultsCache.set(cacheKey, data.Search);
+                        displayResults(data.Search, false);
+                        isSearching = false;
+                        if (searchButton) {
+                            searchButton.disabled = false;
+                            searchButton.innerHTML = originalSearchButtonHTML;
+                            searchButton.classList.remove('opacity-60', 'cursor-not-allowed');
+                        }
                         return;
                     } else {
                         setStatus(`No results found for "${query}". Try a different search term.`);
+                        isSearching = false;
+                        if (searchButton) {
+                            searchButton.disabled = false;
+                            searchButton.innerHTML = originalSearchButtonHTML;
+                            searchButton.classList.remove('opacity-60', 'cursor-not-allowed');
+                        }
                         return;
                     }
                 } catch (error) {
@@ -439,6 +608,12 @@
                     if (attempt === MAX_RETRIES - 1) {
                         setStatus(`Failed to fetch results after ${MAX_RETRIES} attempts. Network or API error. (Check console for details)`);
                         showMessage('Search failed due to a network or API issue.', 'error');
+                        isSearching = false;
+                        if (searchButton) {
+                            searchButton.disabled = false;
+                            searchButton.innerHTML = originalSearchButtonHTML;
+                            searchButton.classList.remove('opacity-60', 'cursor-not-allowed');
+                        }
                         return;
                     }
                     const delay = Math.pow(2, attempt) * 1000;
@@ -447,26 +622,30 @@
             }
         }
 
-        /**
-         * Renders the search results into the container.
-         * @param {Array<Object>} results - Array of media objects from OMDb.
-         */
-        function displayResults(results) {
+        function displayResults(results, fromCache = false) {
             statusMessage.style.display = 'none';
             resultsContainer.innerHTML = '';
-            
-            results.filter(item => item.Poster !== 'N/A').forEach(item => {
+
+            // Keep filtering logic but maintain innerHTML creation for cards
+            results.filter(item => item.Poster && item.Poster !== 'N/A').forEach(item => {
                 const card = createMediaCard(item);
                 resultsContainer.appendChild(card);
             });
+
+            // If everything filtered out, show message
+            if (resultsContainer.children.length === 0) {
+                setStatus('Results have no posters to display. Try a different query.');
+            }
+
+            // small visual hint (toast) if results came from cache
+            if (fromCache) {
+                showMessage('Results loaded from cache', 'info');
+            }
         }
 
-        /**
-         * Handles the click on a movie or series card.
-         */
         function handleCardClick(title, imdbID, type) {
             if (type === 'movie') {
-                const url = `https://vidsrc-embed.ru/embed/movie/${imdbID}`;
+                const url = `https://vidsrc-embed.ru/embed/movie/${encodeURIComponent(imdbID)}`;
                 openPlayer(url, title);
             } else if (type === 'series') {
                 showModal(title, imdbID);
@@ -475,18 +654,16 @@
             }
         }
 
-
-        // --- Player and Modal Functions (Unchanged) ---
-
+        // --- Player and Modal Functions ---
         function showMessage(message, type = 'info') {
             const color = type === 'error' ? 'border-red-500' : 'border-blue-500';
             messageContent.textContent = message;
             messageBox.className = `fixed bottom-5 right-5 z-50 bg-gray-800 text-white p-4 rounded-lg shadow-xl border-l-4 ${color} transition-opacity duration-300`;
             messageBox.classList.remove('hidden');
-            
+
             setTimeout(() => {
                 messageBox.classList.add('hidden');
-            }, 3000);
+            }, 2500);
         }
 
         function setStatus(message, isLoading = false) {
@@ -522,12 +699,13 @@
             playerIframe.src = "";
             playerModal.classList.add('hidden');
         }
-        
+
         function toggleFullScreen() {
-            const element = playerIframe;
+            // Toggle fullscreen for the player modal for a consistent UX
+            const element = playerModal || document.documentElement;
             if (!document.fullscreenElement) {
                 if (element.requestFullscreen) {
-                    element.requestFullscreen();
+                    element.requestFullscreen().catch(err => console.warn('Fullscreen request failed:', err));
                 } else if (element.webkitRequestFullscreen) {
                     element.webkitRequestFullscreen();
                 } else if (element.msRequestFullscreen) {
@@ -535,7 +713,7 @@
                 }
             } else {
                 if (document.exitFullscreen) {
-                    document.exitFullscreen();
+                    document.exitFullscreen().catch(err => console.warn('Exit fullscreen failed:', err));
                 } else if (document.webkitExitFullscreen) {
                     document.webkitExitFullscreen();
                 } else if (document.msExitFullscreen) {
@@ -543,36 +721,6 @@
                 }
             }
         }
-
-        // --- Event Listeners ---
-        searchButton.addEventListener('click', () => {
-            searchMedia(searchInput.value);
-        });
-
-        watchEpisodeButton.addEventListener('click', () => {
-            const season = document.getElementById('seasonInput').value;
-            const episode = document.getElementById('episodeInput').value;
-            const baseTitle = document.getElementById('modalTitle').textContent.replace('Watch ', ''); 
-            
-            if (!currentSeriesImdbId || !season || !episode || season < 1 || episode < 1) {
-                showMessage('Please enter valid Season and Episode numbers.', 'error');
-                return;
-            }
-
-            const url = `https://vidsrc-embed.ru/embed/tv?imdb=${currentSeriesImdbId}&season=${season}&episode=${episode}`;
-            closeModal();
-            openPlayer(url, `${baseTitle} - S${season} E${episode}`);
-        });
-        
-        episodeModal.addEventListener('click', (e) => {
-            if (e.target.id === 'episodeModal') {
-                closeModal();
-            }
-        });
-        
-        // Expose the handler globally for inline onclick attribute in dynamic HTML
-        window.handleFavoriteToggle = handleFavoriteToggle;
-
     </script>
 </body>
 </html>
